@@ -53,11 +53,11 @@ const aspectMap = new Map([
 const reverseMap = new Map([...featureMap,aspectMap].map(e => [...e].reverse()));
 const go = () => {
     for(const dir of paths) {
-        const files = Fs.readdirSync('../../'+dir);
+        const files = Fs.readdirSync('../corpus/'+dir);
         const flist = [];
         files.forEach(f => {
             if(/\.xml$/.test(f))
-                flist.push('../../'+dir + '/' + f);
+                flist.push('../corpus/'+dir + '/' + f);
         });
         readfiles(dir,flist);
     }
