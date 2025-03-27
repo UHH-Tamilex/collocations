@@ -32,6 +32,21 @@ const featureMap = new Map([
 
 const reverseMap = new Map([...featureMap].map(e => [...e].reverse()));
 
+const corporaMap = new Map([
+    ['Kuṟuntokai','KT'],
+    ['Naṟṟiṇai','NA'],
+    ['Akanāṉūṟū','AN'],
+    ['Puṟanāṉūṟu','PN'],
+    ['Aiṅkuṟunūṟu','Aink'],
+    ['Kalittokai','Kali'],
+    ['Tamiḻneri Viḷakkam','TNV'],
+    ['Tirukkuṟaḷ','TK'],
+    ['Cilappatikāram','cila'],
+    ['Maṇimēkalai','MM'],
+    ['Nalāyirat Tivviyap Pirapantam',['AAP','PaLTM','TPa']],
+    ['Tolkāppiyam','Tol']
+]);
+
 var oldNPMI = 0.85;
 const keyNodes = new Set();
 
@@ -97,9 +112,13 @@ const makeGraph = () => {
         ['other','#a6d854'],
         ['interjection','#a6d854']
     ]);
-    const legend = document.getElementById('panellegend');
-    legend.innerHTML = [...colours].map(c =>
-        `<div><input type="checkbox" name="${featureMap.get(c[0])}" checked autocomplete="off"/><label><span style="color:${c[1]}; font-size: 150%">●</span> ${c[0]}</div>`).join('');
+    const poslegend = document.getElementById('posselect');
+    poslegend.innerHTML = [...colours].map(c => {
+        const name = featureMap.get(c[0]);
+        return `<div><input type="checkbox" name="${name}" id="input-${name}" checked autocomplete="off"/><label for="input-${name}"><span style="color:${c[1]}; font-size: 150%">●</span> ${c[0]}</label></div>`;}).join('');
+    
+    const textlegend = document.getElementById('corpusselect');
+    textlegend.innerHTML = [...corporaMap.keys()].map(c => `<div><input type="checkbox" name="${c}" id="input-${c}" checked autocomplete="off"/><label for="input-${c}">${c}</label></div>`).join('');
 
     const colclone = {};
     colclone.nodes = collocations.nodes; // all nodes as graph objects
@@ -220,18 +239,37 @@ const updatePos = e => {
 
     updateGraph();
 };
+const updateCorpus = e => {
+    if(e.target.type !== 'checkbox') return;
+
+    updateGraph();
+};
 const updateGraph = (oldlinks = new Set(),oldnodes = new Set()) => {
     const npmi = document.getElementById('npmi').value;
     const colclone = {};
     colclone.nodes = collocations.nodes; // all nodes as graph objects
     colclone.links = structuredClone(collocations.links); // all original links
     
-    const inputs = document.getElementById('panellegend').querySelectorAll('input');
-    const checked = new Set([...inputs].filter(i => i.checked).map(i => i.getAttribute('name')));
-    if(checked.size !== inputs.length) {
+    const pos = document.getElementById('posselect').querySelectorAll('input');
+    const checked = new Set([...pos].filter(i => i.checked).map(i => i.getAttribute('name')));
+    if(checked.size !== pos.length) {
         colclone.nodes = colclone.nodes.filter(n => checked.has(n.type));
         const checkednodes = new Set(colclone.nodes.map(n => n.id));
         colclone.links = colclone.links.filter(l => checkednodes.has(l.target) && checkednodes.has(l.source));
+    }
+
+    const corpora = document.getElementById('corpusselect').querySelectorAll('input');
+    const checkedc = new Set([...corpora].filter(i => i.checked).map(i => i.getAttribute('name')));
+    if(checkedc.size !== corpora.length) {
+        const prefixes = [...checkedc].reduce((acc,cur) => {
+            const p = corporaMap.get(cur);
+            if(Array.isArray(p))
+                return [...acc,p];
+            acc.push(p);
+            return acc;
+        },[]).join('|');
+        const regex = new RegExp(prefixes);
+        colclone.links = colclone.links.filter(l => l.citations.find(c => c.match(regex)));
     }
 
     colclone.links = colclone.links.filter(l => {
@@ -276,7 +314,8 @@ const searchOrQuit = e => {
 };
 
 document.getElementById('paneltoggle').addEventListener('click',togglePanel);
-document.getElementById('panellegend').addEventListener('click',updatePos);
+document.getElementById('posselect').addEventListener('click',updatePos);
+document.getElementById('corpusselect').addEventListener('click',updateCorpus);
 document.getElementById('npmi').addEventListener('change',updateNPMI);
 document.getElementById('findword').addEventListener('keyup',findWord);
 document.body.addEventListener('click',searchOrQuit);
